@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        :root { --tg-bg: #1a1b1e; --primary: #0088cc; --gold: #ffeb3b; --card-bg: #25262b; --red: #ff4444; }
+        :root { --tg-bg: #1a1b1e; --primary: #0088cc; --gold: #ffeb3b; --card-bg: #25262b; --red: #ff4444; --green: #4caf50; }
         body { background: var(--tg-bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; background: #111; z-index: 100; }
         .page { display: none; flex: 1; flex-direction: column; padding: 20px; text-align: center; overflow-y: auto; box-sizing: border-box; padding-bottom: 100px; }
@@ -18,18 +18,19 @@
         input, select { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0b0c0d; color: white; font-size: 16px; box-sizing: border-box; }
         .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
         .shop-item { background: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; }
-        .btn-buy { background: #4caf50; border: none; color: white; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-buy { background: var(--green); border: none; color: white; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 5px; }
         .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
         .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .nav-btn i { font-style: normal; font-size: 18px; }
         .nav-btn.active { color: var(--primary); }
         .order-card { background: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 10px; text-align: left; border: 1px solid #333; position: relative; }
         .btn-delete { background: var(--red); border: none; color: white; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; float: right; }
+        .bonus-section { background: #2c2d33; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px dashed var(--gold); }
     </style>
 </head>
 <body>
     <div class="header">
-        <div>🤖 UVIEW PRO</div>
+        <div id="user-name">🤖 Загрузка...</div>
         <div style="color:var(--gold)">💰 <span id="coin-count">0</span></div>
     </div>
 
@@ -50,12 +51,12 @@
         <input type="text" id="yt-url" placeholder="Ссылка на видео">
         <input type="number" id="v-count" value="10" oninput="updPr()">
         <select id="v-time" onchange="updPr()">
-            <option value="60">60 секунд</option>
-            <option value="180">180 секунд</option>
-            <option value="260">260 секунд</option>
+            <option value="60">60 сек</option>
+            <option value="180">180 сек</option>
+            <option value="260">260 сек</option>
         </select>
-        <div style="margin:20px 0; font-size:18px;">Итого: <span id="total-price" style="color:var(--gold)">1000</span> монет</div>
-        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ ЗАКАЗ</button>
+        <div style="margin:20px 0; font-size:18px;">Цена: <span id="total-price" style="color:var(--gold)">1000</span> 💰</div>
+        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ</button>
     </div>
 
     <div id="page-orders" class="page">
@@ -64,11 +65,21 @@
     </div>
 
     <div id="page-shop" class="page">
-        <h3>🛒 МАГАЗИН</h3>
+        <div class="bonus-section">
+            <h4>🎁 ЕЖЕДНЕВНЫЙ БОНУС</h4>
+            <button class="btn-buy" id="daily-btn" onclick="claimDaily()">ЗАБРАТЬ 100 💰</button>
+        </div>
+
+        <div class="bonus-section">
+            <h4>👥 РЕФЕРАЛЫ</h4>
+            <p style="font-size: 12px;">Дарим 500 💰 за друга!</p>
+            <button class="btn-action" style="padding:10px; font-size:12px;" onclick="copyRef()">КОПИРОВАТЬ ССЫЛКУ</button>
+        </div>
+
+        <h3>🛒 КУПИТЬ МОНЕТЫ</h3>
         <div class="shop-grid">
-            <div class="shop-item"><b>5,000</b><span>$1.99</span><button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
-            <div class="shop-item"><b>15,000</b><span>$4.99</span><button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
-            <div class="shop-item" style="grid-column: span 2;"><b>50,000</b><span>$12.99</span><button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>5k</b><span>$1.99</span><button class="btn-buy" onclick="buyProcess()">BUY</button></div>
+            <div class="shop-item"><b>15k</b><span>$4.99</span><button class="btn-buy" onclick="buyProcess()">BUY</button></div>
         </div>
     </div>
 
@@ -76,7 +87,7 @@
         <div class="nav-btn active" onclick="tab('home', this)"><i>🏠</i>ЛЕНТА</div>
         <div class="nav-btn" onclick="tab('upload', this)"><i>📷</i>ЗАГРУЗКА</div>
         <div class="nav-btn" onclick="tab('orders', this); loadMyOrders();"><i>📊</i>ЗАКАЗЫ</div>
-        <div class="nav-btn" onclick="tab('shop', this)"><i>🛒</i>МАГАЗИН</div>
+        <div class="nav-btn" onclick="tab('shop', this)"><i>🛒</i>БОНУСЫ</div>
     </div>
 
     <script>
@@ -84,19 +95,60 @@
               S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0bXdnenJ5b2VlZWh5bWJ5cmR6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODY2NzcxNywiZXhwIjoyMDg0MjQzNzE3fQ.YJNdFs468N3vIqzvEfQPzg_jAGXsx-rN8YDMqQX793g", 
               sb = supabase.createClient(S_URL, S_KEY), tg = window.Telegram.WebApp;
 
-        let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", vids = [], curr = 0, coins = 0, player, timerId;
+        let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", 
+            userName = tg.initDataUnsafe?.user?.first_name || "Пользователь",
+            vids = [], curr = 0, coins = 0, player, timerId;
 
         async function boot() {
             tg.expand();
+            document.getElementById('user-name').innerText = "👤 " + userName;
+            
+            // Загрузка или создание профиля
             let { data: p } = await sb.from('profiles').select('*').eq('user_id', userId).single();
-            if (p) { coins = p.coins; document.getElementById('coin-count').innerText = coins; }
+            if (!p) {
+                // Если новый — проверяем реферала в start_param
+                const refBy = tg.initDataUnsafe?.start_param || null;
+                await sb.from('profiles').insert([{ user_id: userId, coins: 500, last_bonus: new Date(0).toISOString() }]);
+                if(refBy) await rewardReferrer(refBy);
+                coins = 500;
+            } else {
+                coins = p.coins;
+            }
+            document.getElementById('coin-count').innerText = coins;
+
             let { data: v } = await sb.from('videos').select('*');
             vids = (v || []).filter(item => (item.views_done || 0) < item.views_needed);
             if (vids.length > 0) updateVideoDisplay();
         }
 
+        async function rewardReferrer(refId) {
+            let { data: rp } = await sb.from('profiles').select('coins').eq('user_id', refId).single();
+            if(rp) await sb.from('profiles').update({ coins: rp.coins + 500 }).eq('user_id', refId);
+        }
+
+        async function claimDaily() {
+            let { data: p } = await sb.from('profiles').select('last_bonus').eq('user_id', userId).single();
+            const last = new Date(p.last_bonus);
+            const now = new Date();
+            if (now - last < 24 * 60 * 60 * 1000) {
+                return tg.showAlert("Бонус будет доступен завтра!");
+            }
+            coins += 100;
+            await sb.from('profiles').update({ coins, last_bonus: now.toISOString() }).eq('user_id', userId);
+            document.getElementById('coin-count').innerText = coins;
+            tg.showAlert("Вы получили 100 💰!");
+        }
+
+        function copyRef() {
+            const link = `https://t.me/${tg.initDataUnsafe?.receiver?.username || 'ТВОЙ_БОТ_USER_NAME'}?start=${userId}`;
+            const el = document.createElement('textarea');
+            el.value = link; document.body.appendChild(el); el.select(); document.execCommand('copy');
+            document.body.removeChild(el);
+            tg.showAlert("Ссылка скопирована! Отправь её другу.");
+        }
+
+        // Остальные функции (плеер, заказы) оставляем как были
         function onYouTubeIframeAPIReady() { boot(); }
-        
         function updateVideoDisplay() { 
             if(vids[curr]) {
                 const reward = Math.floor((vids[curr].duration || 60) / 60 * 50);
@@ -104,17 +156,10 @@
                 loadVid(vids[curr].youtube_id);
             }
         }
-
         function loadVid(id) { 
             if (player) { player.cueVideoById(id); } 
-            else {
-                player = new YT.Player('video-player', { 
-                    height: '100%', width: '100%', videoId: id, 
-                    playerVars: { 'controls': 1, 'rel': 0, 'playsinline': 1 } 
-                }); 
-            }
+            else { player = new YT.Player('video-player', { height: '100%', width: '100%', videoId: id, playerVars: { 'controls': 1, 'rel': 0, 'playsinline': 1 } }); }
         }
-
         function startWatching() {
             if(!player) return;
             player.playVideo();
@@ -127,7 +172,6 @@
                 if(t <= 0) { clearInterval(timerId); player.pauseVideo(); finish(); }
             }, 1000);
         }
-
         async function finish() {
             const reward = Math.floor(vids[curr].duration / 60 * 50);
             coins += reward;
@@ -136,32 +180,17 @@
             tg.showAlert(`Получено ${reward} монет!`);
             location.reload();
         }
-
         async function loadMyOrders() {
             const list = document.getElementById('orders-list');
             list.innerHTML = "Загрузка...";
             let { data: myV } = await sb.from('videos').select('*').eq('user_id', userId).order('created_at', { ascending: false });
             if(!myV || myV.length === 0) { list.innerHTML = "Пусто"; return; }
-            list.innerHTML = myV.map(v => `
-                <div class="order-card">
-                    <button class="btn-delete" onclick="deleteVid(${v.id})">Удалить</button>
-                    <b>ID: ${v.youtube_id}</b><br>
-                    Готово: ${v.views_done || 0}/${v.views_needed}
-                </div>
-            `).join('');
+            list.innerHTML = myV.map(v => `<div class="order-card"><button class="btn-delete" onclick="deleteVid(${v.id})">Удалить</button><b>ID: ${v.youtube_id}</b><br>Готово: ${v.views_done || 0}/${v.views_needed}</div>`).join('');
         }
-
         async function deleteVid(id) {
-            if(confirm("Удалить это видео? Монеты не возвращаются.")) {
-                await sb.from('videos').delete().eq('id', id);
-                loadMyOrders();
-                tg.showAlert("Удалено!");
-            }
+            if(confirm("Удалить видео?")) { await sb.from('videos').delete().eq('id', id); loadMyOrders(); }
         }
-
-        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
         function updPr() { document.getElementById('total-price').innerText = Math.floor(document.getElementById('v-count').value * (document.getElementById('v-time').value / 60) * 100); }
-        
         async function uploadVid() {
             const url = document.getElementById('yt-url').value;
             const vidId = url.includes('v=') ? url.split('v=')[1].split('&')[0] : url.split('/').pop().split('?')[0];
@@ -169,9 +198,8 @@
             if (coins < price) return tg.showAlert("Мало монет!");
             await sb.from('videos').insert([{ youtube_id: vidId, views_needed: parseInt(document.getElementById('v-count').value), duration: parseInt(document.getElementById('v-time').value), user_id: userId, views_done: 0 }]);
             coins -= price; await sb.from('profiles').update({ coins }).eq('user_id', userId);
-            tg.showAlert("Готово!"); location.reload();
+            location.reload();
         }
-
         function tab(n, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
             document.getElementById('page-' + n).classList.add('active-page');
@@ -180,6 +208,7 @@
         }
         function nextVid() { if(vids.length) { curr = (curr + 1) % vids.length; updateVideoDisplay(); } }
         function prevVid() { if(vids.length) { curr = (curr - 1 + vids.length) % vids.length; updateVideoDisplay(); } }
+        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
     </script>
 </body>
 </html>
