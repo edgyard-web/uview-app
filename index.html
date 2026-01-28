@@ -141,7 +141,7 @@
         }
 
         function copyRef() {
-            const link = `https://t.me/${tg.initDataUnsafe?.receiver?.username || 'ViewBot'}?start=${userId}`;
+            const link = `https://t.me/${tg.initDataUnsafe?.receiver?.username || '@EdViewBot'}?start=${userId}`;
             const el = document.createElement('textarea');
             el.value = link; document.body.appendChild(el); el.select(); document.execCommand('copy');
             document.body.removeChild(el);
