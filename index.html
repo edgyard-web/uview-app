@@ -109,9 +109,9 @@
             if (!p) {
                 // Если новый — проверяем реферала в start_param
                 const refBy = tg.initDataUnsafe?.start_param || null;
-                await sb.from('profiles').insert([{ user_id: userId, coins: 500, last_bonus: new Date(0).toISOString() }]);
+                await sb.from('profiles').insert([{ user_id: userId, coins: 5000, last_bonus: new Date(0).toISOString() }]);
                 if(refBy) await rewardReferrer(refBy);
-                coins = 500;
+                coins = 5000;
             } else {
                 coins = p.coins;
             }
@@ -124,7 +124,7 @@
 
         async function rewardReferrer(refId) {
             let { data: rp } = await sb.from('profiles').select('coins').eq('user_id', refId).single();
-            if(rp) await sb.from('profiles').update({ coins: rp.coins + 500 }).eq('user_id', refId);
+            if(rp) await sb.from('profiles').update({ coins: rp.coins + 5000 }).eq('user_id', refId);
         }
 
         async function claimDaily() {
@@ -134,10 +134,10 @@
             if (now - last < 24 * 60 * 60 * 1000) {
                 return tg.showAlert("Бонус будет доступен завтра!");
             }
-            coins += 100;
+            coins += 1000;
             await sb.from('profiles').update({ coins, last_bonus: now.toISOString() }).eq('user_id', userId);
             document.getElementById('coin-count').innerText = coins;
-            tg.showAlert("Вы получили 100 💰!");
+            tg.showAlert("Вы получили 1000 💰!");
         }
 
         function copyRef() {
