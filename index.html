@@ -16,9 +16,13 @@
         #video-player { width: 100%; height: 100%; }
         .btn-action { background: var(--primary); border: none; color: white; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; }
         input, select { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0b0c0d; color: white; font-size: 16px; box-sizing: border-box; }
+        
+        /* Стили магазина */
         .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
         .shop-item { background: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; }
         .btn-buy { background: #4caf50; border: none; color: white; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .bonus-card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid var(--gold); margin-bottom: 20px; }
+        
         .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
         .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .nav-btn i { font-style: normal; font-size: 18px; }
@@ -36,7 +40,7 @@
     <div id="page-home" class="page active-page">
         <div class="video-box"><div id="video-player"></div></div>
         <div id="watch-controls" style="width:100%">
-            <button class="btn-action" id="watch-btn-text" onclick="startWatching()">▶ СМОТРЕТЬ (+0 💰)</button>
+            <button class="btn-action" id="watch-btn-text" onclick="startWatching()">▶ СМОТРЕТЬ</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button class="btn-action" style="flex:1; background:#333" onclick="prevVid()">⬅</button>
                 <button class="btn-action" style="flex:1; background:#333" onclick="nextVid()">➡</button>
@@ -47,15 +51,17 @@
 
     <div id="page-upload" class="page">
         <h3>НОВОЕ ЗАДАНИЕ</h3>
-        <input type="text" id="yt-url" placeholder="Ссылка на видео">
+        <input type="text" id="yt-url" placeholder="Ссылка на YouTube">
+        <div style="text-align:left; font-size:12px; color:#888; margin-left:5px;">Количество просмотров:</div>
         <input type="number" id="v-count" value="10" oninput="updPr()">
+        <div style="text-align:left; font-size:12px; color:#888; margin-left:5px;">Время просмотра:</div>
         <select id="v-time" onchange="updPr()">
             <option value="60">60 секунд</option>
             <option value="180">180 секунд</option>
             <option value="260">260 секунд</option>
         </select>
-        <div style="margin:20px 0; font-size:18px;">Итого: <span id="total-price" style="color:var(--gold)">1000</span> монет</div>
-        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ ЗАКАЗ</button>
+        <div style="margin:20px 0; font-size:18px;">Цена заказа: <span id="total-price" style="color:var(--gold)">1000</span>💰</div>
+        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ</button>
     </div>
 
     <div id="page-orders" class="page">
@@ -64,7 +70,14 @@
     </div>
 
     <div id="page-shop" class="page">
-        <h3>🛒 МАГАЗИН</h3>
+        <h3>🎁 БОНУСЫ И ПОКУПКИ</h3>
+        
+        <div id="bonus-card" class="bonus-card">
+            <h4>Подписка на канал</h4>
+            <button id="sub-link-btn" class="btn-action" onclick="openChannel()">1. ПОДПИСАТЬСЯ</button>
+            <button id="bonus-claim-btn" class="btn-action" style="display:none; background:var(--gold); color:black" onclick="claimBonus()">2. ПОЛУЧИТЬ 5000</button>
+        </div>
+
         <div class="shop-grid">
             <div class="shop-item"><b>5,000</b><span>$1.99</span><button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
             <div class="shop-item"><b>15,000</b><span>$4.99</span><button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
@@ -85,32 +98,30 @@
               sb = supabase.createClient(S_URL, S_KEY), tg = window.Telegram.WebApp;
 
         let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", 
-            vids = [], curr = 0, coins = 0, player, timerId;
+            vids = [], curr = 0, coins = 0, player, timerId, hasBonus = false;
 
         async function boot() {
             tg.expand();
-            // 1. Загрузка или создание профиля
-            let { data: p, error: pErr } = await sb.from('profiles').select('*').eq('user_id', userId).single();
+            // Загрузка профиля
+            let { data: p } = await sb.from('profiles').select('*').eq('user_id', userId).single();
             if (p) { 
                 coins = p.coins; 
+                hasBonus = p.bonus_claimed;
                 document.getElementById('coin-count').innerText = coins; 
+                if (hasBonus) document.getElementById('bonus-card').innerHTML = "<h4>✅ Бонус получен</h4>";
             } else {
-                await sb.from('profiles').insert({ user_id: userId, coins: 0 });
+                await sb.from('profiles').insert({ user_id: userId, coins: 0, bonus_claimed: false });
             }
 
-            // 2. Загрузка видео без ограничений (все активные)
             await loadAllVideos();
+            updPr();
         }
 
         async function loadAllVideos() {
             let { data: v } = await sb.from('videos').select('*').order('created_at', { ascending: false });
             vids = (v || []).filter(item => (item.views_done || 0) < item.views_needed);
-            
-            if (vids.length > 0) {
-                updateVideoDisplay();
-            } else {
-                document.getElementById('watch-btn-text').innerText = "ЗАДАНИЙ НЕТ";
-            }
+            if (vids.length > 0) updateVideoDisplay();
+            else document.getElementById('watch-btn-text').innerText = "ЗАДАНИЙ НЕТ";
         }
 
         function onYouTubeIframeAPIReady() { boot(); }
@@ -124,14 +135,8 @@
         }
 
         function loadVid(id) { 
-            if (player && typeof player.cueVideoById === 'function') { 
-                player.cueVideoById(id); 
-            } else {
-                player = new YT.Player('video-player', { 
-                    height: '100%', width: '100%', videoId: id, 
-                    playerVars: { 'controls': 0, 'rel': 0, 'playsinline': 1 } 
-                }); 
-            }
+            if (player && typeof player.cueVideoById === 'function') player.cueVideoById(id); 
+            else player = new YT.Player('video-player', { height: '100%', width: '100%', videoId: id, playerVars: { 'controls': 0, 'rel': 0, 'playsinline': 1 } }); 
         }
 
         function startWatching() {
@@ -139,92 +144,82 @@
             player.playVideo();
             document.getElementById('watch-controls').style.display='none';
             document.getElementById('timer-display').style.display='block';
-            
             let t = vids[curr].duration || 60;
             document.getElementById('seconds').innerText = t;
-
             if (timerId) clearInterval(timerId);
-
             timerId = setInterval(() => {
-                t--; 
-                document.getElementById('seconds').innerText = t;
-                if(t <= 0) { 
-                    clearInterval(timerId); 
-                    player.pauseVideo(); 
-                    finish(); 
-                }
+                t--; document.getElementById('seconds').innerText = t;
+                if(t <= 0) { clearInterval(timerId); player.pauseVideo(); finish(); }
             }, 1000);
         }
 
         async function finish() {
             const video = vids[curr];
             const reward = Math.floor(video.duration / 60 * 50);
-            
-            // Начисление монет
             coins += reward;
             await sb.from('profiles').update({ coins }).eq('user_id', userId);
+            const newViews = (video.views_done || 0) + 1;
+            if (newViews >= video.views_needed) await sb.from('videos').delete().eq('id', video.id);
+            else await sb.from('videos').update({ views_done: newViews }).eq('id', video.id);
             
-            // Обновление просмотров
-            const newViewsDone = (video.views_done || 0) + 1;
-            
-            if (newViewsDone >= video.views_needed) {
-                // АВТО-УДАЛЕНИЕ если лимит исчерпан
-                await sb.from('videos').delete().eq('id', video.id);
-            } else {
-                await sb.from('videos').update({ views_done: newViewsDone }).eq('id', video.id);
-            }
-
-            tg.showAlert(`✅ Получено ${reward} монет!`);
+            tg.showAlert(`✅ Начислено ${reward} монет!`);
             document.getElementById('coin-count').innerText = coins;
             document.getElementById('timer-display').style.display='none';
             document.getElementById('watch-controls').style.display='flex';
-            
-            // Перезагрузка списка для актуализации
             await loadAllVideos();
         }
 
+        // --- МАГАЗИН И БОНУСЫ ---
+        function openChannel() { 
+            tg.openTelegramLink("https://t.me/edgar1984_g1p"); 
+            document.getElementById('bonus-claim-btn').style.display = 'block'; 
+        }
+
+        async function claimBonus() {
+            if (hasBonus) return;
+            coins += 5000; hasBonus = true;
+            await sb.from('profiles').update({ coins, bonus_claimed: true }).eq('user_id', userId);
+            document.getElementById('coin-count').innerText = coins;
+            document.getElementById('bonus-card').innerHTML = "<h4>✅ Бонус получен</h4>";
+            tg.showAlert("5000 монет зачислено!");
+        }
+
+        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
+
+        // --- ЗАКАЗЫ ---
         async function loadMyOrders() {
             const list = document.getElementById('orders-list');
             list.innerHTML = "Загрузка...";
             let { data: myV } = await sb.from('videos').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-            if(!myV || myV.length === 0) { list.innerHTML = "У вас нет активных заказов"; return; }
+            if(!myV || myV.length === 0) { list.innerHTML = "Нет активных заказов"; return; }
             list.innerHTML = myV.map(v => `
                 <div class="order-card">
                     <button class="btn-delete" onclick="deleteVid(${v.id})">Удалить</button>
-                    <b>Видео: ${v.youtube_id}</b><br>
+                    <b>${v.youtube_id}</b><br>
                     Прогресс: ${v.views_done || 0}/${v.views_needed}
                 </div>
             `).join('');
         }
 
         async function deleteVid(id) {
-            if(confirm("Удалить этот заказ? Монеты не вернутся.")) {
+            if(confirm("Удалить?")) {
                 await sb.from('videos').delete().eq('id', id);
                 loadMyOrders();
-                tg.showAlert("Удалено.");
             }
         }
 
         async function uploadVid() {
             const url = document.getElementById('yt-url').value;
             const vidId = url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?/)?.[1];
-            
             const count = parseInt(document.getElementById('v-count').value);
             const time = parseInt(document.getElementById('v-time').value);
             const price = Math.floor(count * (time / 60) * 100);
 
-            if (!vidId) return tg.showAlert("Некорректная ссылка!");
-            if (coins < price) return tg.showAlert("Недостаточно монет!");
+            if (!vidId) return tg.showAlert("Ошибка в ссылке!");
+            if (coins < price) return tg.showAlert("Мало монет!");
 
-            await sb.from('videos').insert([{ 
-                youtube_id: vidId, 
-                views_needed: count, 
-                duration: time, 
-                user_id: userId, 
-                views_done: 0 
-            }]);
-
-            coins -= price;
+            await sb.from('videos').insert([{ youtube_id: vidId, views_needed: count, duration: time, user_id: userId, views_done: 0 }]);
+            coins -= price; 
             await sb.from('profiles').update({ coins }).eq('user_id', userId);
             tg.showAlert("Опубликовано!");
             location.reload();
@@ -246,7 +241,6 @@
 
         function nextVid() { if(vids.length) { curr = (curr + 1) % vids.length; updateVideoDisplay(); } }
         function prevVid() { if(vids.length) { curr = (curr - 1 + vids.length) % vids.length; updateVideoDisplay(); } }
-        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
     </script>
 </body>
 </html>
