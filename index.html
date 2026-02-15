@@ -9,17 +9,22 @@
     <style>
         :root { --tg-bg: #1a1b1e; --primary: #0088cc; --gold: #ffeb3b; --card-bg: #25262b; --red: #ff4444; --green: #4caf50; }
         body { background: var(--tg-bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; background: #111; }
-        .user-info { display: flex; flex-direction: column; font-size: 14px; }
-        .page { display: none; flex: 1; flex-direction: column; padding: 20px; text-align: center; overflow-y: auto; box-sizing: border-box; padding-bottom: 100px; }
+        .header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; background: #111; z-index: 100; }
+        .user-info { display: flex; flex-direction: column; font-size: 13px; }
+        .page { display: none; flex: 1; flex-direction: column; padding: 15px; text-align: center; overflow-y: auto; box-sizing: border-box; padding-bottom: 100px; }
         .active-page { display: flex; }
-        .video-box { background: #000; width: 100%; aspect-ratio: 16/9; border-radius: 20px; border: 2px solid #333; overflow: hidden; }
+        .video-box { background: #000; width: 100%; aspect-ratio: 16/9; border-radius: 15px; border: 2px solid #333; overflow: hidden; position: relative; }
         #video-player { width: 100%; height: 100%; }
-        .btn-action { background: var(--primary); border: none; color: white; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .btn-action { background: var(--primary); border: none; color: white; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        input, select { width: 100%; padding: 12px; margin: 5px 0 15px 0; border-radius: 10px; border: 1px solid #333; background: #0b0c0d; color: white; font-size: 16px; box-sizing: border-box; }
         .bonus-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--gold); margin-bottom: 15px; }
-        .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; }
-        .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .shop-item { background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid #333; }
+        .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+        .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; text-decoration: none; }
         .nav-btn.active { color: var(--primary); }
+        .order-card { background: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; border: 1px solid #444; }
+        .btn-del { background: var(--red); color: white; border: none; padding: 5px 10px; border-radius: 5px; float: right; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -43,23 +48,47 @@
         <div id="timer-display" style="display:none; font-size:24px; color:var(--gold); margin-top:20px; font-weight:bold;">⏳ <span id="seconds">0</span> сек.</div>
     </div>
 
+    <div id="page-upload" class="page">
+        <h3>НОВОЕ ЗАДАНИЕ</h3>
+        <input type="text" id="yt-url" placeholder="Ссылка на YouTube">
+        <div style="text-align:left; font-size:12px; color:#888;">Просмотры:</div>
+        <input type="number" id="v-count" value="10" oninput="updPr()">
+        <div style="text-align:left; font-size:12px; color:#888;">Время (сек):</div>
+        <select id="v-time" onchange="updPr()">
+            <option value="60">60</option>
+            <option value="180">180</option>
+            <option value="260">260</option>
+        </select>
+        <div style="margin:10px 0; font-size:18px;">Итого: <span id="total-price" style="color:var(--gold)">1000</span>💰</div>
+        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ</button>
+    </div>
+
+    <div id="page-orders" class="page">
+        <h3>📊 МОИ ЗАКАЗЫ</h3>
+        <div id="orders-list"></div>
+    </div>
+
     <div id="page-shop" class="page">
         <h3>🎁 БОНУСЫ</h3>
-        
         <div class="bonus-card" style="border-color: var(--green);">
-            <h4>📅 Ежедневный подарок</h4>
-            <button id="daily-btn" class="btn-action" style="background: var(--green);" onclick="claimDaily()">ЗАБРАТЬ 500💰</button>
+            <h4>📅 Ежедневный бонус</h4>
+            <button class="btn-action" style="background: var(--green);" onclick="claimDaily()">ЗАБРАТЬ 500💰</button>
         </div>
-
         <div id="bonus-box" class="bonus-card">
-            <h4>📢 Разовый бонус (5000)</h4>
+            <h4>📢 Разовый бонус</h4>
             <button class="btn-action" onclick="openChannel()">1. ПОДПИСАТЬСЯ</button>
             <button id="bonus-claim-btn" class="btn-action" style="display:none; background:var(--gold); color:black" onclick="claimBonus()">2. ПОЛУЧИТЬ 5000💰</button>
+        </div>
+        <div class="shop-grid">
+            <div class="shop-item"><b>5,000</b><br><span>$1.99</span><button class="btn-action" style="padding:5px;font-size:12px" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>15,000</b><br><span>$4.99</span><button class="btn-action" style="padding:5px;font-size:12px" onclick="buyProcess()">КУПИТЬ</button></div>
         </div>
     </div>
 
     <div class="nav-bar">
         <div class="nav-btn active" onclick="tab('home', this)">🏠 ЛЕНТА</div>
+        <div class="nav-btn" onclick="tab('upload', this)">📷 ЗАКАЗ</div>
+        <div class="nav-btn" onclick="tab('orders', this); loadMyOrders();">📊 ЗАКАЗЫ</div>
         <div class="nav-btn" onclick="tab('shop', this)">🛒 МАГАЗИН</div>
     </div>
 
@@ -70,7 +99,7 @@
 
         let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", 
             userName = tg.initDataUnsafe?.user?.first_name || "User",
-            coins = 0, lastDailyDate = "", player, vids = [], curr = 0;
+            coins = 0, lastDaily = "", vids = [], curr = 0, player, timerId;
 
         async function boot() {
             tg.expand();
@@ -78,13 +107,11 @@
             document.getElementById('display-id').innerText = userId;
 
             let { data: p } = await sb.from('profiles').select('*').eq('user_id', userId).single();
-            
             if (!p) {
                 await sb.from('profiles').insert({ user_id: userId, coins: 0, bonus_claimed: false, last_daily: "" });
-                coins = 0;
             } else {
                 coins = p.coins;
-                lastDailyDate = p.last_daily;
+                lastDaily = p.last_daily;
                 if (p.bonus_claimed) document.getElementById('bonus-box').style.display = 'none';
             }
             document.getElementById('coin-count').innerText = coins;
@@ -93,8 +120,9 @@
 
         async function loadAllVideos() {
             let { data: v } = await sb.from('videos').select('*');
-            vids = v || [];
+            vids = (v || []).filter(i => (i.views_done || 0) < i.views_needed);
             if (vids.length > 0) updateVideoDisplay();
+            else document.getElementById('watch-btn-text').innerText = "ЗАДАНИЙ НЕТ";
         }
 
         function onYouTubeIframeAPIReady() { boot(); }
@@ -104,50 +132,69 @@
             const reward = Math.floor(vids[curr].duration / 60 * 50);
             document.getElementById('watch-btn-text').innerText = `▶ СМОТРЕТЬ (+${reward} 💰)`;
             if (player) player.cueVideoById(vids[curr].youtube_id);
-            else player = new YT.Player('video-player', { height: '100%', width: '100%', videoId: vids[curr].youtube_id, playerVars: {'controls':0} });
+            else player = new YT.Player('video-player', { height: '100%', width: '100%', videoId: vids[curr].youtube_id, playerVars: {'controls':0, 'rel':0, 'playsinline':1} });
         }
 
-        // --- ЛОГИКА ЕЖЕДНЕВНОГО БОНУСА ---
+        function startWatching() {
+            if(!player || !vids[curr]) return;
+            player.playVideo();
+            document.getElementById('watch-controls').style.display='none';
+            document.getElementById('timer-display').style.display='block';
+            let t = vids[curr].duration;
+            document.getElementById('seconds').innerText = t;
+            timerId = setInterval(async () => {
+                t--; document.getElementById('seconds').innerText = t;
+                if(t <= 0) {
+                    clearInterval(timerId);
+                    const reward = Math.floor(vids[curr].duration / 60 * 50);
+                    const newBalance = coins + reward;
+                    await sb.from('profiles').update({ coins: newBalance }).eq('user_id', userId);
+                    await sb.from('videos').update({ views_done: (vids[curr].views_done || 0) + 1 }).eq('id', vids[curr].id);
+                    tg.showAlert(`✅ Начислено ${reward} монет!`);
+                    location.reload();
+                }
+            }, 1000);
+        }
+
         async function claimDaily() {
             const today = new Date().toLocaleDateString();
-            if (lastDailyDate === today) {
-                tg.showAlert("Вы уже забирали бонус сегодня! Приходите завтра.");
-                return;
-            }
-
+            if (lastDaily === today) return tg.showAlert("Уже получено сегодня!");
             const newBalance = coins + 500;
-            const { error } = await sb.from('profiles').update({ 
-                coins: newBalance, 
-                last_daily: today 
-            }).eq('user_id', userId);
-
-            if (!error) {
-                coins = newBalance;
-                lastDailyDate = today;
-                document.getElementById('coin-count').innerText = coins;
-                tg.showAlert("Вам начислено 500💰 за ежедневный вход!");
-            }
+            await sb.from('profiles').update({ coins: newBalance, last_daily: today }).eq('user_id', userId);
+            location.reload();
         }
 
-        // --- БОНУС ЗА ПОДПИСКУ ---
-        function openChannel() {
-            tg.openTelegramLink("https://t.me/edgar1984_g1p");
-            document.getElementById('bonus-claim-btn').style.display = 'block';
-        }
-
+        function openChannel() { tg.openTelegramLink("https://t.me/edgar1984_g1p"); document.getElementById('bonus-claim-btn').style.display = 'block'; }
+        
         async function claimBonus() {
             const newBalance = coins + 5000;
-            const { error } = await sb.from('profiles').update({ 
-                coins: newBalance, 
-                bonus_claimed: true 
-            }).eq('user_id', userId);
+            await sb.from('profiles').update({ coins: newBalance, bonus_claimed: true }).eq('user_id', userId);
+            location.reload();
+        }
 
-            if (!error) {
-                coins = newBalance;
-                document.getElementById('coin-count').innerText = coins;
-                document.getElementById('bonus-box').style.display = 'none';
-                tg.showAlert("Бонус 5000💰 начислен!");
-            }
+        async function loadMyOrders() {
+            let { data: myV } = await sb.from('videos').select('*').eq('user_id', userId);
+            document.getElementById('orders-list').innerHTML = (myV || []).map(v => `
+                <div class="order-card">
+                    <button class="btn-del" onclick="deleteOrder(${v.id})">Удалить</button>
+                    <b>${v.youtube_id}</b><br>
+                    Прогресс: ${v.views_done}/${v.views_needed}
+                </div>
+            `).join('');
+        }
+
+        async function deleteOrder(id) {
+            if(confirm("Удалить заказ?")) { await sb.from('videos').delete().eq('id', id); loadMyOrders(); }
+        }
+
+        async function uploadVid() {
+            const url = document.getElementById('yt-url').value;
+            const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+            const price = parseInt(document.getElementById('total-price').innerText);
+            if (!vidId || coins < price) return tg.showAlert("Ошибка!");
+            await sb.from('videos').insert([{ youtube_id: vidId, views_needed: parseInt(document.getElementById('v-count').value), duration: parseInt(document.getElementById('v-time').value), user_id: userId, views_done: 0 }]);
+            await sb.from('profiles').update({ coins: coins - price }).eq('user_id', userId);
+            location.reload();
         }
 
         function tab(n, el) {
@@ -155,30 +202,13 @@
             document.getElementById('page-' + n).classList.add('active-page');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
+            if (timerId) clearInterval(timerId);
         }
 
-        function startWatching() {
-            if(!player) return;
-            player.playVideo();
-            document.getElementById('watch-controls').style.display='none';
-            document.getElementById('timer-display').style.display='block';
-            let t = vids[curr].duration;
-            document.getElementById('seconds').innerText = t;
-            let timerId = setInterval(async () => {
-                t--; document.getElementById('seconds').innerText = t;
-                if(t <= 0) {
-                    clearInterval(timerId);
-                    const reward = Math.floor(vids[curr].duration / 60 * 50);
-                    const newBalance = coins + reward;
-                    await sb.from('profiles').update({ coins: newBalance }).eq('user_id', userId);
-                    tg.showAlert(`Готово! +${reward}💰`);
-                    location.reload();
-                }
-            }, 1000);
-        }
-
+        function updPr() { document.getElementById('total-price').innerText = Math.floor(document.getElementById('v-count').value * (document.getElementById('v-time').value / 60) * 100); }
         function nextVid() { curr = (curr + 1) % vids.length; updateVideoDisplay(); }
         function prevVid() { curr = (curr - 1 + vids.length) % vids.length; updateVideoDisplay(); }
+        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
     </script>
 </body>
 </html>
