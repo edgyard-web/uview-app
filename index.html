@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -18,13 +19,13 @@
         .btn-action { background: var(--primary); border: none; color: white; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
         input, select { width: 100%; padding: 12px; margin: 5px 0 15px 0; border-radius: 10px; border: 1px solid #333; background: #0b0c0d; color: white; font-size: 16px; box-sizing: border-box; }
         .bonus-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--gold); margin-bottom: 15px; }
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .shop-item { background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid #333; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .shop-item { background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; justify-content: center; }
         .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
-        .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; text-decoration: none; }
+        .nav-btn { color: #5c5f66; font-size: 10px; cursor: pointer; text-align: center; flex: 1; text-decoration: none; padding: 5px; }
         .nav-btn.active { color: var(--primary); }
-        .order-card { background: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; border: 1px solid #444; }
-        .btn-del { background: var(--red); color: white; border: none; padding: 5px 10px; border-radius: 5px; float: right; cursor: pointer; }
+        .order-card { background: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; border: 1px solid #444; position: relative; }
+        .btn-del { background: var(--red); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; position: absolute; right: 10px; top: 10px; }
     </style>
 </head>
 <body>
@@ -69,19 +70,23 @@
     </div>
 
     <div id="page-shop" class="page">
-        <h3>🎁 БОНУСЫ</h3>
+        <h3>🎁 БОНУСЫ И МОНЕТЫ</h3>
         <div class="bonus-card" style="border-color: var(--green);">
             <h4>📅 Ежедневный бонус</h4>
             <button class="btn-action" style="background: var(--green);" onclick="claimDaily()">ЗАБРАТЬ 500💰</button>
         </div>
+        
         <div id="bonus-box" class="bonus-card">
             <h4>📢 Разовый бонус</h4>
             <button class="btn-action" onclick="openChannel()">1. ПОДПИСАТЬСЯ</button>
             <button id="bonus-claim-btn" class="btn-action" style="display:none; background:var(--gold); color:black" onclick="claimBonus()">2. ПОЛУЧИТЬ 5000💰</button>
         </div>
+
         <div class="shop-grid">
-            <div class="shop-item"><b>5,000</b><br><span>$1.99</span><button class="btn-action" style="padding:5px;font-size:12px" onclick="buyProcess()">КУПИТЬ</button></div>
-            <div class="shop-item"><b>15,000</b><br><span>$4.99</span><button class="btn-action" style="padding:5px;font-size:12px" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>5,000</b><br><small>$1.99</small><button class="btn-action" style="padding:8px;font-size:10px" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>15,000</b><br><small>$4.99</small><button class="btn-action" style="padding:8px;font-size:10px" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>25,000</b><br><small>$7.99</small><button class="btn-action" style="padding:8px;font-size:10px" onclick="buyProcess()">КУПИТЬ</button></div>
+            <div class="shop-item"><b>50,000</b><br><small>$12.99</small><button class="btn-action" style="padding:8px;font-size:10px" onclick="buyProcess()">КУПИТЬ</button></div>
         </div>
     </div>
 
@@ -105,13 +110,12 @@
             tg.expand();
             document.getElementById('user-name').innerText = userName;
             document.getElementById('display-id').innerText = userId;
-
             let { data: p } = await sb.from('profiles').select('*').eq('user_id', userId).single();
             if (!p) {
                 await sb.from('profiles').insert({ user_id: userId, coins: 0, bonus_claimed: false, last_daily: "" });
             } else {
                 coins = p.coins;
-                lastDaily = p.last_daily;
+                lastDaily = p.last_daily || "";
                 if (p.bonus_claimed) document.getElementById('bonus-box').style.display = 'none';
             }
             document.getElementById('coin-count').innerText = coins;
@@ -147,7 +151,8 @@
                 if(t <= 0) {
                     clearInterval(timerId);
                     const reward = Math.floor(vids[curr].duration / 60 * 50);
-                    const newBalance = coins + reward;
+                    const { data: p } = await sb.from('profiles').select('coins').eq('user_id', userId).single();
+                    const newBalance = (p.coins || 0) + reward;
                     await sb.from('profiles').update({ coins: newBalance }).eq('user_id', userId);
                     await sb.from('videos').update({ views_done: (vids[curr].views_done || 0) + 1 }).eq('id', vids[curr].id);
                     tg.showAlert(`✅ Начислено ${reward} монет!`);
@@ -159,16 +164,16 @@
         async function claimDaily() {
             const today = new Date().toLocaleDateString();
             if (lastDaily === today) return tg.showAlert("Уже получено сегодня!");
-            const newBalance = coins + 500;
-            await sb.from('profiles').update({ coins: newBalance, last_daily: today }).eq('user_id', userId);
+            const { data: p } = await sb.from('profiles').select('coins').eq('user_id', userId).single();
+            await sb.from('profiles').update({ coins: p.coins + 500, last_daily: today }).eq('user_id', userId);
             location.reload();
         }
 
         function openChannel() { tg.openTelegramLink("https://t.me/edgar1984_g1p"); document.getElementById('bonus-claim-btn').style.display = 'block'; }
         
         async function claimBonus() {
-            const newBalance = coins + 5000;
-            await sb.from('profiles').update({ coins: newBalance, bonus_claimed: true }).eq('user_id', userId);
+            const { data: p } = await sb.from('profiles').select('coins').eq('user_id', userId).single();
+            await sb.from('profiles').update({ coins: p.coins + 5000, bonus_claimed: true }).eq('user_id', userId);
             location.reload();
         }
 
@@ -191,9 +196,11 @@
             const url = document.getElementById('yt-url').value;
             const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
             const price = parseInt(document.getElementById('total-price').innerText);
-            if (!vidId || coins < price) return tg.showAlert("Ошибка!");
+            if (!vidId) return tg.showAlert("Некорректная ссылка!");
+            let { data: p } = await sb.from('profiles').select('coins').eq('user_id', userId).single();
+            if (p.coins < price) return tg.showAlert("Недостаточно монет!");
             await sb.from('videos').insert([{ youtube_id: vidId, views_needed: parseInt(document.getElementById('v-count').value), duration: parseInt(document.getElementById('v-time').value), user_id: userId, views_done: 0 }]);
-            await sb.from('profiles').update({ coins: coins - price }).eq('user_id', userId);
+            await sb.from('profiles').update({ coins: p.coins - price }).eq('user_id', userId);
             location.reload();
         }
 
